@@ -65,8 +65,10 @@ export default function HeaderIcons({ setSidebar, isOnHero }) {
           {initial}
         </button>
       ) : (
-        <button onClick={() => navigate("/login")}>
-          <span>Login</span>
+         <button onClick={() => navigate("/login")}>
+          <span className={`${isOnHero ? "text-white" : "text-black"} font-medium`}>
+            Login
+          </span>
         </button>
       )}
     </div>

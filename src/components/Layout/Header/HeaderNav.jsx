@@ -23,8 +23,12 @@ export default function HeaderNav({ isOnHero }) {
 
               {cat.submenu.length > 0 && (
                 <span className="flex items-center">
-                  <ChevronRight size={16} className="group-hover:hidden block" />
-                  <ChevronDown size={16} className="hidden group-hover:block" />
+                  <ChevronRight
+                    size={16}
+                    className={`group-hover:hidden block ${isOnHero ? "text-white" : "text-black"}`}/>
+                  <ChevronDown
+                    size={16}
+                    className={`hidden group-hover:block ${isOnHero ? "text-white" : "text-black"}`}/>
                 </span>
               )}
 
