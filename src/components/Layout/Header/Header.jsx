@@ -2,6 +2,8 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/authContext";
+import SearchPopup from "../../Search/SearchPopup";
+import supabase from "../../../lib/supabaseClient";
 
 import HeaderNav from "./HeaderNav";
 import HeaderSearch from "./HeaderSearch";
@@ -15,7 +17,7 @@ import Wishlist from "../../../pages/Wishlist";
 export default function Header({ isOnHero }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setSearchQuery } = useSearch();
+  const { searchQuery, setSearchQuery } = useSearch();
 
   const [sidebar, setSidebar] = useState(null);
   const [query, setQuery] = useState("");
@@ -23,17 +25,112 @@ export default function Header({ isOnHero }) {
   const [hidden, setHidden] = useState(false);
   const [lastScroll, setLastScroll] = useState(0);
 
+  const [searchResults, setSearchResults] = useState([]);
+  const [showPopup, setShowPopup] = useState(false);
+
+  // KETIKAN USER
   const handleTyping = (value) => {
     setQuery(value);
-    if (value.trim() === "") return setSearchQuery("");
+
+    if (!value.trim()) {
+      setSearchQuery("");
+      setShowPopup(false);
+      setSearchResults([]);
+      return;
+    }
+
     setSearchQuery(value);
   };
 
+  // ENTER → HALAMAN SEARCH
   const handleSearch = (e) => {
-    if (e.key === "Enter") setSearchQuery(query);
+    if (e.key === "Enter") {
+      setShowPopup(false);
+      navigate(`/search?q=${query}`);
+    }
   };
 
-  // SCROLL DOWN → HIDE, SCROLL UP → SHOW
+  // ================================================================
+  // FINAL LIVE SEARCH — PAKAI LOGIKA ORDER SEPERTI DI PAGE LAIN
+  // ================================================================
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowPopup(false);
+      return;
+    }
+
+    const delay = setTimeout(async () => {
+      try {
+        // 1. Produk
+        const { data: products } = await supabase
+          .from("product")
+          .select("id, name")
+          .ilike("name", `%${searchQuery}%`);
+
+        if (!products?.length) {
+          setSearchResults([]);
+          setShowPopup(true);
+          return;
+        }
+
+        const ids = products.map((p) => p.id);
+
+        // 2. Relasi product_image (PAKAI NESTED SELECT SEPERTI PAGE LAIN)
+        const { data: imgs } = await supabase
+          .from("product_image")
+          .select("product_id, image_url, order")
+          .in("product_id", ids);
+
+        // 3. Harga
+        const { data: prices } = await supabase
+          .from("stock_variants")
+          .select("product_id, price")
+          .in("product_id", ids);
+
+        // 4. Gabung data
+        const merged = products.map((p) => {
+          const pid = Number(p.id);
+
+          const img = imgs?.find(
+            (i) => Number(i.product_id) === pid && i.order === 1
+          );
+
+          const price = prices?.find(
+            (pr) => Number(pr.product_id) === pid
+          );
+
+          return {
+            ...p,
+            image_url: img?.image_url || null,
+            price: price?.price || null,
+          };
+        });
+
+        // 5. Sort relevansi + limit
+        const sorted = merged
+          .sort((a, b) => {
+            const A = a.name
+              .toLowerCase()
+              .indexOf(searchQuery.toLowerCase());
+            const B = b.name
+              .toLowerCase()
+              .indexOf(searchQuery.toLowerCase());
+            return A - B;
+          })
+          .slice(0, 5);
+
+        setSearchResults(sorted);
+        setShowPopup(true);
+      } catch (err) {
+        console.log("Live search error:", err);
+      }
+    }, 250);
+
+    return () => clearTimeout(delay);
+  }, [searchQuery]);
+
+  // SCROLL HIDE HEADER
   useEffect(() => {
     const onScroll = () => {
       const current = window.scrollY;
@@ -57,9 +154,7 @@ export default function Header({ isOnHero }) {
         className={`
           fixed top-0 left-0 w-full z-50
           transition-all duration-300
-
           ${hidden ? "-translate-y-full" : "translate-y-0"}
-
           bg-transparent
           ${isOnHero ? "text-white" : "text-black"}
         `}
@@ -71,6 +166,7 @@ export default function Header({ isOnHero }) {
               navigate("/");
               setQuery("");
               setSearchQuery("");
+              setShowPopup(false);
             }}
           >
             Kavva
@@ -78,13 +174,26 @@ export default function Header({ isOnHero }) {
 
           <HeaderNav isOnHero={isOnHero} />
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
+            {/* INPUT SEARCH */}
             <HeaderSearch
               query={query}
               setQuery={handleTyping}
               handleSearch={handleSearch}
               isOnHero={isOnHero}
             />
+
+            {/* POPUP */}
+            {showPopup && searchResults.length > 0 && (
+              <SearchPopup
+                results={searchResults}
+                onSelect={(item) => {
+                  setShowPopup(false);
+                  navigate(`/product/${item.id}`);
+                }}
+                onClose={() => setShowPopup(false)}
+              />
+            )}
 
             <HeaderIcons
               user={user}
