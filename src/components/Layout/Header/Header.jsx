@@ -2,12 +2,13 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../../context/authContext";
-import SearchPopup from "../../Search/SearchPopup";
 import supabase from "../../../lib/supabaseClient";
 
 import HeaderNav from "./HeaderNav";
 import HeaderSearch from "./HeaderSearch";
 import HeaderIcons from "./HeaderIcons";
+import SearchPopup from "../../Search/SearchPopup";
+
 import { useSearch } from "../../../context/SearchContext";
 import { RightSidebar } from "../../SideBar/RightSidebar";
 
@@ -21,6 +22,7 @@ export default function Header({ isOnHero }) {
 
   const [sidebar, setSidebar] = useState(null);
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState(false);
 
   const [hidden, setHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -28,7 +30,9 @@ export default function Header({ isOnHero }) {
   const [searchResults, setSearchResults] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
 
-  // KETIKAN USER
+  // =====================
+  // HANDLE TYPING (LOGIC LAMA)
+  // =====================
   const handleTyping = (value) => {
     setQuery(value);
 
@@ -42,26 +46,20 @@ export default function Header({ isOnHero }) {
     setSearchQuery(value);
   };
 
-  // ENTER → HALAMAN SEARCH
+  // =====================
+  // ENTER → SEARCH PAGE
+  // =====================
   const handleSearch = (e) => {
     if (e.key === "Enter") {
+      setSearchMode(false);
       setShowPopup(false);
       navigate(`/search?q=${query}`);
     }
   };
-  // CLOSE SIDEBAR DARI EVENT GLOBAL
-  useEffect(() => {
-    const closeSidebar = () => {
-      setSidebar(null);
-    };
 
-    window.addEventListener("close-sidebar", closeSidebar);
-    return () => window.removeEventListener("close-sidebar", closeSidebar);
-  }, []);
-
-  // ================================================================
-  // FINAL LIVE SEARCH — PAKAI LOGIKA ORDER SEPERTI DI PAGE LAIN
-  // ================================================================
+  // =====================
+  // LIVE SEARCH (PAKAI FUNGSI LAMA)
+  // =====================
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -71,66 +69,47 @@ export default function Header({ isOnHero }) {
 
     const delay = setTimeout(async () => {
       try {
-        // 1. Produk
         const { data: products } = await supabase
           .from("product")
-          .select("id, name")
+          .select(`
+            id,
+            name,
+            product_image (image_url, order),
+            stock_variants (price, stock)
+          `)
           .ilike("name", `%${searchQuery}%`);
 
-        if (!products?.length) {
+        if (!products || products.length === 0) {
           setSearchResults([]);
-          setShowPopup(true);
+          setShowPopup(false);
           return;
         }
 
-        const ids = products.map((p) => p.id);
-
-        // 2. Relasi product_image (PAKAI NESTED SELECT SEPERTI PAGE LAIN)
-        const { data: imgs } = await supabase
-          .from("product_image")
-          .select("product_id, image_url, order")
-          .in("product_id", ids);
-
-        // 3. Harga
-        const { data: prices } = await supabase
-          .from("stock_variants")
-          .select("product_id, price")
-          .in("product_id", ids);
-
-        // 4. Gabung data
-        const merged = products.map((p) => {
-          const pid = Number(p.id);
-
-          const img = imgs?.find(
-            (i) => Number(i.product_id) === pid && i.order === 1
+        const merged = products
+        .filter((p) => {
+          // pastikan ada variant dengan stock > 0
+          return p.stock_variants?.some(
+            (v) => Number(v.stock) > 0
           );
+        })
+        .map((p) => {
+          const img = p.product_image?.find((i) => i.order === 1);
 
-          const price = prices?.find(
-            (pr) => Number(pr.product_id) === pid
+          // ambil harga dari variant yang stock-nya masih ada
+          const availableVariant = p.stock_variants.find(
+            (v) => Number(v.stock) > 0
           );
 
           return {
-            ...p,
+            id: p.id,
+            name: p.name,
             image_url: img?.image_url || null,
-            price: price?.price || null,
+            price: availableVariant?.price || null,
           };
         });
 
-        // 5. Sort relevansi + limit
-        const sorted = merged
-          .sort((a, b) => {
-            const A = a.name
-              .toLowerCase()
-              .indexOf(searchQuery.toLowerCase());
-            const B = b.name
-              .toLowerCase()
-              .indexOf(searchQuery.toLowerCase());
-            return A - B;
-          })
-          .slice(0, 5);
-
-        setSearchResults(sorted);
-        setShowPopup(true);
+      setSearchResults(merged.slice(0, 8));
+      setShowPopup(merged.length > 0);
       } catch (err) {
         console.log("Live search error:", err);
       }
@@ -139,32 +118,17 @@ export default function Header({ isOnHero }) {
     return () => clearTimeout(delay);
   }, [searchQuery]);
 
-  // SCROLL HIDE HEADER
- // SCROLL HIDE HEADER ala Reebok
+  // =====================
+  // SCROLL HIDE HEADER (TETAP)
+  // =====================
   useEffect(() => {
     const handleScroll = () => {
       const current = window.scrollY;
       const prev = lastScrollY.current;
 
-      const isScrollingDown = current > prev;
-      const isScrollingUp = current < prev;
+      if (Math.abs(current - prev) < 8) return;
 
-      // Selalu tampil kalau dekat paling atas
-      if (current - prev > 8) {
-        // Scroll turunnya cukup besar
-        setHidden(true);
-      }
-      else if (prev - current > 8) {
-        // Scroll naik cukup besar
-        setHidden(false);
-      } else if (isScrollingDown) {
-        // Scroll turun → sembunyi
-        setHidden(true);
-      } else if (isScrollingUp) {
-        // Scroll naik → muncul
-        setHidden(false);
-      }
-
+      setHidden(current > prev);
       lastScrollY.current = current;
     };
 
@@ -174,6 +138,14 @@ export default function Header({ isOnHero }) {
 
   return (
     <>
+      {/* OVERLAY SEARCH */}
+      {searchMode && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          onClick={() => setSearchMode(false)}
+        />
+      )}
+
       <header
         className={`
           fixed top-0 left-0 w-full z-50
@@ -183,35 +155,40 @@ export default function Header({ isOnHero }) {
           ${isOnHero ? "text-white" : "text-black"}
         `}
       >
-        <div className="flex items-center justify-between px-8 py-4">
+        <div className="flex items-center justify-between px-8 py-4 relative z-50">
+          {/* LOGO */}
           <div
-            className="font-bold text-xl cursor-pointer relative -top-1"
+            className="font-bold text-xl cursor-pointer"
             onClick={() => {
               navigate("/");
               setQuery("");
               setSearchQuery("");
               setShowPopup(false);
+              setSearchMode(false);
             }}
           >
             Kavva
           </div>
 
-          <HeaderNav isOnHero={isOnHero} />
+          {/* NAV */}
+          {!searchMode && <HeaderNav isOnHero={isOnHero} />}
 
-          <div className="flex items-center gap-4 relative">
-            {/* INPUT SEARCH */}
+          <div className="flex items-center gap-4">
             <HeaderSearch
               query={query}
               setQuery={handleTyping}
               handleSearch={handleSearch}
               isOnHero={isOnHero}
+              searchMode={searchMode}
+              setSearchMode={setSearchMode}
             />
 
-            {/* POPUP */}
-            {showPopup && searchResults.length > 0 && (
+            {/* LIVE SEARCH POPUP */}
+            {searchMode && showPopup && searchResults.length > 0 && (
               <SearchPopup
                 results={searchResults}
                 onSelect={(item) => {
+                  setSearchMode(false);
                   setShowPopup(false);
                   navigate(`/product/${item.id}`);
                 }}
@@ -219,18 +196,20 @@ export default function Header({ isOnHero }) {
               />
             )}
 
-            <HeaderIcons
-              user={user}
-              setSidebar={setSidebar}
-              isOnHero={isOnHero}
-            />
+            {!searchMode && (
+              <HeaderIcons
+                user={user}
+                setSidebar={setSidebar}
+                isOnHero={isOnHero}
+              />
+            )}
           </div>
         </div>
       </header>
 
       <RightSidebar open={sidebar !== null} onClose={() => setSidebar(null)}>
-        {sidebar === "cart" && <Cart />}
-        {sidebar === "wishlist" && <Wishlist />}
+        {sidebar === "cart" && <Cart onClose={() => setSidebar(null)} />}
+        {sidebar === "wishlist" && <Wishlist onClose={() => setSidebar(null)} />}
       </RightSidebar>
     </>
   );

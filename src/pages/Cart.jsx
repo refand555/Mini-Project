@@ -4,9 +4,8 @@ import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 
-export default function Cart() {
+export default function Cart({ onClose }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -73,13 +72,11 @@ export default function Cart() {
   return (
     <main className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-      <button
-        onClick={() => {
-          window.dispatchEvent(new Event("close-sidebar"));
-          navigate(-1);
-        }}
-        className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition">
-        <ArrowLeft size={20} className="text-black" />
+       <button
+        onClick={onClose}
+        className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition"
+      >
+        <X size={20} className="text-black" />
       </button>
       <h1 className="text-3xl font-bold mb-6 tracking-wide">Keranjang Belanja</h1>
       </div>

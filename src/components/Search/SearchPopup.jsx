@@ -16,18 +16,18 @@ export default function SearchPopup({ results, onSelect, onClose }) {
   }, []);
 
   return (
-    <div className="absolute left-1/2 top-14 -translate-x-1/2 w-[90vw] max-w-3xl z-50">
+    <div className="absolute left-0 right-0 top-16 px-8 z-50">
       <div
         ref={popupRef}
-        className="bg-white shadow-xl rounded-xl p-4 overflow-x-auto flex gap-4 scrollbar-hide"
+        className="bg-white shadow-xl rounded-xl px-4 py-5 overflow-x-auto flex gap-8 scrollbar-hide"
       >
         {results.map((item) => (
           <div
             key={item.id}
-            className="min-w-[160px] cursor-pointer"
+            className="min-w-[180px] cursor-pointer"
             onClick={() => onSelect(item)}
           >
-            <div className="w-full h-32 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+            <div className="w-full h-44 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
               <img
                 src={item.image_url}
                 alt={item.name}
