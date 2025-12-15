@@ -17,7 +17,7 @@ export const categories = [
       { label: "Sneakers", path: "/category/performance/sneakers" },
       { label: "Football", path: "/category/performance/football" },
       { label: "Basket", path: "/category/performance/basket" },
-      { label: "Formals", path: "/category/performance/formal" },
+      { label: "Formals", path: "/category/performance/formals" },
     ],
   },
   {

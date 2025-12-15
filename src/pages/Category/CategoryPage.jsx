@@ -2,7 +2,10 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 
-import { getProductsByBrandSlug, getProductsByCategorySlug } from "../../services/ProductService";
+import {
+  getProductsByBrandSlug,
+  getProductsByCategorySlug,
+} from "../../services/ProductService";
 import ProductCard from "../../components/Product/ProductCard";
 import SidebarFilter from "../../components/SidebarFilter";
 
@@ -14,24 +17,48 @@ export default function CategoryPage() {
 
   useEffect(() => {
     load();
-  }, [main, sub, params.toString()]); // penting: URL filter berubah → refetch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [main, sub, params.toString()]);
 
   async function load() {
-    const brandSlugs = ["nike", "adidas", "puma", "reebok", "asics", "newbalance", "converse"];
+    const brandSlugs = [
+      "nike",
+      "adidas",
+      "puma",
+      "reebok",
+      "asics",
+      "newbalance",
+      "converse",
+    ];
 
-    // ambil filters dari URL (SidebarFilter sudah mengisi ini) :contentReference[oaicite:5]{index=5}
+    // =========================
+    // CLEAN FILTERS (INI PENTING)
+    // =========================
+    const rawGrades = params.get("grades");
     const filters = {
-      grades: params.get("grades") ? params.get("grades").split(",") : [],
+      grades: rawGrades
+        ? rawGrades
+            .split(",")
+            .map((g) => g.trim())
+            .filter(Boolean)
+        : [],
       price: params.get("price") || null,
     };
 
+    // =========================
+    // BRAND PAGE
+    // =========================
     if (brandSlugs.includes(main)) {
-      const data = await getProductsByBrandSlug(main, filters); // slug lock dulu (brand), baru filter
-      return setProducts(data);
+      const data = await getProductsByBrandSlug(main, filters);
+      setProducts(data);
+      return;
     }
 
+    // =========================
+    // CATEGORY PAGE
+    // =========================
     const slug = sub ? sub : main;
-    const data = await getProductsByCategorySlug(slug, filters); // slug lock dulu (category), baru filter
+    const data = await getProductsByCategorySlug(slug, filters);
     setProducts(data);
   }
 

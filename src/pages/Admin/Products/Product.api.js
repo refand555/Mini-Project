@@ -106,14 +106,14 @@ export async function insertProduct(form, img1, img2, brandId, categoryIds) {
 
   // 4. Insert varian pertama (size + grade + price + stock)
   await supabase.from("stock_variants").insert([
-    {
-      product_id: productId,
-      size: Number(form.size),
-      grades_id: Number(form.grades_id),
-      price: Number(form.harga),
-      stock: Number(form.stok)
-    }
-  ]);
+  {
+    product_id: productId,
+    size: form.size.trim().toUpperCase(),
+    grades_id: Number(form.grades_id),
+    price: Number(form.harga),
+    stock: Number(form.stock)
+  }
+]);
 
   return product;
 }
@@ -256,7 +256,7 @@ export async function getAllGrades() {
 export async function addVariant(productId, variant) {
   const payload = {
     product_id: productId,
-    size: Number(variant.size),
+    size: variant.size.trim().toUpperCase(),
     grades_id: Number(variant.grades_id),
     price: Number(variant.price),
     stock: Number(variant.stock)

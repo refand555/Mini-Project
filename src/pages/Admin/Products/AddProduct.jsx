@@ -15,7 +15,7 @@ export default function AddProduct() {
     grades_id: "",
     deskripsi: "",
     size: "",
-    stok: "",
+    stock: "",
     harga: "",
     gambar1: null,
     gambar2: null,
@@ -134,8 +134,8 @@ export default function AddProduct() {
           <FormInput label="Size" name="size" form={form} handle={handleChange} />
 
           <FormInput
-            label="Stok"
-            name="stok"
+            label="Stock"
+            name="stock"
             type="number"
             form={form}
             handle={handleChange}

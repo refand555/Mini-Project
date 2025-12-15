@@ -110,7 +110,7 @@ export default function EditVariant() {
                     type="text"
                     defaultValue={v.size}
                     onBlur={(e) =>
-                      handleUpdate(v.id, "size", Number(e.target.value))
+                      handleUpdate(v.id, "size", e.target.value)
                     }
                     className="w-full bg-gray-200 border border-gray-300 rounded-lg p-2"
                   />

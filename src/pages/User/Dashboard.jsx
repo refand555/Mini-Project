@@ -8,6 +8,8 @@ import {
   Heart,
   HomeIcon,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAuth } from "../../context/authContext";
 import supabase from "../../lib/supabaseClient";
@@ -18,6 +20,7 @@ export default function Dashboard() {
 
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [editMode, setEditMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [username, setUsername] = useState("");
   const [pass, setPass] = useState("");
@@ -221,18 +224,29 @@ export default function Dashboard() {
 
               <div>
                 <p className="text-sm font-semibold mb-1">Password</p>
-                {editMode ? (
+
+                <div className="relative">
                   <input
-                    className="border border-gray-300 rounded-lg p-3 w-full bg-white text-black"
+                    type={showPassword ? "text" : "password"}
+                    readOnly={!editMode}
                     value={pass}
                     onChange={(e) => setPass(e.target.value)}
+                    className={`border border-gray-300 rounded-lg p-3 w-full pr-12 ${
+                      editMode ? "bg-white text-black" : "bg-gray-100 text-black"
+                    }`}
                   />
-                ) : (
-                  <p className="border border-gray-300 rounded-lg p-3 bg-gray-100">
-                    {pass}
-                  </p>
-                )}
+
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
+
+
 
               <div>
                 <p className="text-sm font-semibold mb-1">Username</p>

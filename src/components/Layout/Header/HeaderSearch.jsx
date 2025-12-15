@@ -25,7 +25,7 @@ export default function HeaderSearch({
       className={`
         relative transition-all duration-300 z-[60]
         ${searchMode
-          ? "absolute left-1/2 -translate-x-1/2 w-[1200px]"
+          ? "absolute left-1/2 -translate-x-1/2 w-[1125px]"
           : "w-40"}
       `}
     >

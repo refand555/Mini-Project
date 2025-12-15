@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import supabase from "../lib/supabaseClient";
 import { Eye, EyeOff } from "lucide-react";
+import supabase from "../lib/supabaseClient";
+import { useAuth } from "../context/authContext";
 
 export default function ResetPassword() {
   const [newPass, setNewPass] = useState("");
   const [err, setErr] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErr("");
 
+    // 1. Update password Supabase Auth
     const { error } = await supabase.auth.updateUser({
       password: newPass,
     });
@@ -22,9 +23,17 @@ export default function ResetPassword() {
       return;
     }
 
+    // 2. SINKRONKAN ke profiles.pass
+    await supabase
+      .from("profiles")
+      .update({ pass: newPass })
+      .eq("id", user.id);
+
+    // 3. Bersihkan recovery + logout
     localStorage.removeItem("reset-mode");
     await supabase.auth.signOut();
 
+    // 4. Kembali ke login
     window.location.replace("/login");
   };
 
@@ -40,24 +49,21 @@ export default function ResetPassword() {
             <label className="text-sm font-medium">Password Baru</label>
             <input
               type={showPass ? "text" : "password"}
-              placeholder="Masukkan password baru"
               className="w-full mt-1 px-4 py-3 rounded-xl outline-none bg-white border border-[#E5E1D8]"
               value={newPass}
               onChange={(e) => setNewPass(e.target.value)}
               required
             />
-
-            {/* tombol eye */}
             <button
               type="button"
-              className="absolute right-4 top-[42px] text-gray-600"
+              className="absolute right-4 top-11 text-gray-600"
               onClick={() => setShowPass(!showPass)}
             >
               {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
 
-          <button className="w-full py-3 bg-black text-white rounded-xl hover:bg-black/80 transition">
+          <button className="w-full py-3 bg-black text-white rounded-xl">
             Simpan Password
           </button>
 

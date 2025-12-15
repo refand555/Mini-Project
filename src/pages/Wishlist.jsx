@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
-import { Trash2, ShoppingCart, X } from "lucide-react";
+import { Trash2, ShoppingCart, X, ArrowLeft } from "lucide-react";
 import { useNavigate} from "react-router-dom";
 
-export default function Wishlist({ onClose }) {
+export default function Wishlist({ onClose, isSidebar = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -59,11 +59,16 @@ export default function Wishlist({ onClose }) {
     <div className="p-6 relative">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={onClose}
+          onClick={isSidebar ? onClose : () => navigate(-1)}
           className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition"
         >
-          <X size={20} className="text-black" />
+          {isSidebar ? (
+            <X size={20} className="text-black" />
+          ) : (
+            <ArrowLeft size={20} className="text-black" />
+          )}
         </button>
+
         <h1 className="text-2xl font-bold tracking-wide">Wishlist</h1>
       </div>
 
@@ -95,7 +100,7 @@ export default function Wishlist({ onClose }) {
                 {/* GAMBAR */}
                 <div className="w-[100px] h-[100px] flex items-center justify-center"
                 onClick={() => {
-                window.dispatchEvent(new Event("close-sidebar"));
+                if (isSidebar && onClose) onClose();
                 navigate(`/product/${item.product.id}`);
               }}>
                   <img
@@ -120,7 +125,7 @@ export default function Wishlist({ onClose }) {
                 <div className="flex flex-col items-center gap-3">
                   <button
                     onClick={() => {
-                    window.dispatchEvent(new Event("close-sidebar"));
+                    if (isSidebar && onClose) onClose();
                     navigate(`/product/${item.product.id}`);
                   }}
                     className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition">

@@ -209,7 +209,12 @@ export default function Header({ isOnHero }) {
 
       <RightSidebar open={sidebar !== null} onClose={() => setSidebar(null)}>
         {sidebar === "cart" && <Cart onClose={() => setSidebar(null)} />}
-        {sidebar === "wishlist" && <Wishlist onClose={() => setSidebar(null)} />}
+        {sidebar === "wishlist" && (
+        <Wishlist
+          onClose={() => setSidebar(null)}
+          isSidebar
+        />
+      )}
       </RightSidebar>
     </>
   );
