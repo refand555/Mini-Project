@@ -81,6 +81,21 @@ export default function AddProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // =========================
+    // VALIDASI WAJIB
+    // =========================
+    if (
+      !form.nama ||
+      !form.brand_id ||
+      !form.grades_id ||
+      !form.size ||
+      !form.stock ||
+      !form.harga
+    ) {
+      alert("Lengkapi semua field wajib (Nama, Brand, Grade, Size, Stock, Harga)");
+      return;
+    }
+
     try {
       const img1 = form.gambar1 ? await uploadImage(form.gambar1) : null;
       const img2 = form.gambar2 ? await uploadImage(form.gambar2) : null;
@@ -88,13 +103,13 @@ export default function AddProduct() {
       await insertProduct(form, img1, img2, form.brand_id, form.category_ids);
       navigate("/admin/products");
     } catch (err) {
-      console.log("Gagal menambah produk:", err.message);
+      alert(err.message);
+      console.error("Gagal menambah produk:", err);
     }
   };
 
   return (
     <div className="p-10 w-full">
-
       {/* HEADER */}
       <div className="mb-8 flex items-center gap-3">
         <button
@@ -113,8 +128,6 @@ export default function AddProduct() {
         className="bg-white border border-gray-200 shadow p-10 rounded-xl w-full"
       >
         <div className="flex flex-col gap-8">
-
-          {/* FULL WIDTH INPUTS */}
           <FormInput label="Nama Produk" name="nama" form={form} handle={handleChange} />
 
           <SelectBlock
@@ -179,7 +192,6 @@ export default function AddProduct() {
           </div>
         </div>
 
-        {/* BUTTON */}
         <button
           type="submit"
           className="mt-10 bg-black text-white w-full py-3 rounded-xl font-semibold hover:bg-black/80 transition"

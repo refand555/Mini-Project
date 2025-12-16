@@ -6,6 +6,7 @@ import {
   User,
   ShoppingBag,
   Heart,
+  ShoppingCart,
   HomeIcon,
   ArrowLeft,
   Eye,
@@ -62,7 +63,7 @@ export default function Dashboard() {
 
     const pending = data.filter((o) => o.status === "Waiting For Payment").length;
     const dipesan = data.filter((o) => o.status === "Packing").length;
-    const dibayar = data.filter((o) => o.status === "Done").length;
+    const dibayar = data.filter((o) => o.status === "Sending").length;
 
     setStats({ pending, dipesan, dibayar });
   };
@@ -148,6 +149,16 @@ export default function Dashboard() {
             <Heart size={20} color="white" />
             <span className="font-medium text-white">Wishlist</span>
           </button>
+
+          <button
+          onClick={() =>
+            navigate("/cart", { state: { from: "dashboard" } })
+          }
+          className="flex items-center gap-3">
+          <ShoppingCart size={20} color="white" />
+          <span className="font-medium text-white">Cart</span>
+        </button>
+
 
         </nav>
 

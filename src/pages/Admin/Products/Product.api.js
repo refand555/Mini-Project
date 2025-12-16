@@ -11,6 +11,7 @@ export async function getProducts() {
       name,
       brand_id,
       description,
+      created_by:profiles(id, usernames),
       brands(name),
       product_categories(
         category_id,
@@ -22,7 +23,8 @@ export async function getProducts() {
         size,
         stock,
         price,
-        grades:grades_id(name)
+        grades:grades_id(name),
+        created_by:profiles(id, usernames)
       )
     `)
     .order("id", { ascending: true });
@@ -31,10 +33,9 @@ export async function getProducts() {
   return data;
 }
 
-
-// 
+//
 // GET PRODUCT (SINGLE)
-// 
+//
 export async function getProductById(id) {
   const { data, error } = await supabase
     .from("product")
@@ -43,6 +44,7 @@ export async function getProductById(id) {
       name,
       brand_id,
       description,
+      created_by:profiles(id, usernames),
       product_categories (
         category_id,
         categories(name)
@@ -56,7 +58,8 @@ export async function getProductById(id) {
         size,
         stock,
         price,
-        grades:grades_id(name)
+        grades:grades_id(name),
+        created_by:profiles(id, usernames)
       )
     `)
     .eq("id", id)
@@ -66,11 +69,13 @@ export async function getProductById(id) {
   return data;
 }
 
-
 //
 // INSERT PRODUCT
 //
 export async function insertProduct(form, img1, img2, brandId, categoryIds) {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
   // 1. Insert Produk utama
   const { data: product, error: err1 } = await supabase
@@ -79,7 +84,8 @@ export async function insertProduct(form, img1, img2, brandId, categoryIds) {
       {
         name: form.nama,
         brand_id: brandId,
-        description: form.deskripsi
+        description: form.deskripsi,
+        created_by: user.id
       }
     ])
     .select()
@@ -104,16 +110,17 @@ export async function insertProduct(form, img1, img2, brandId, categoryIds) {
     await supabase.from("product_categories").insert(mapping);
   }
 
-  // 4. Insert varian pertama (size + grade + price + stock)
+  // 4. Insert varian pertama
   await supabase.from("stock_variants").insert([
-  {
-    product_id: productId,
-    size: form.size.trim().toUpperCase(),
-    grades_id: Number(form.grades_id),
-    price: Number(form.harga),
-    stock: Number(form.stock)
-  }
-]);
+    {
+      product_id: productId,
+      size: form.size.trim().toUpperCase(),
+      grades_id: Number(form.grades_id),
+      price: Number(form.harga),
+      stock: Number(form.stock),
+      created_by: user.id
+    }
+  ]);
 
   return product;
 }
@@ -122,7 +129,6 @@ export async function insertProduct(form, img1, img2, brandId, categoryIds) {
 // DELETE PRODUCT
 //
 export async function deleteProduct(id) {
-  // 1. Ambil data image untuk dapatkan path file
   const { data: images } = await supabase
     .from("product_image")
     .select("image_url")
@@ -130,35 +136,25 @@ export async function deleteProduct(id) {
 
   if (images && images.length > 0) {
     for (const img of images) {
-      // 2. Convert public URL → path dalam bucket
-      const url = img.image_url;
-      const path = url.split("/product_image/")[1]; 
-      // contoh: "products/xxx.jpg"
-
+      const path = img.image_url.split("/product_image/")[1];
       if (path) {
-        // 3. Hapus dari storage
-        await supabase.storage
-          .from("product_image")
-          .remove([path]);
+        await supabase.storage.from("product_image").remove([path]);
       }
     }
   }
 
-  // 4. Hapus semua relasi
   await supabase.from("product_image").delete().eq("product_id", id);
   await supabase.from("product_categories").delete().eq("product_id", id);
   await supabase.from("stock_variants").delete().eq("product_id", id);
 
-  // 5. Hapus produk utama
   const { error } = await supabase.from("product").delete().eq("id", id);
   if (error) throw error;
 }
 
 //
-// Update
-// 
+// UPDATE PRODUCT
+//
 export async function updateProduct(productId, form, newImg1, newImg2, brandId, categoryIds) {
-  // 1. Ambil gambar lama
   const { data: oldImages } = await supabase
     .from("product_image")
     .select("id, image_url, order")
@@ -180,7 +176,6 @@ export async function updateProduct(productId, form, newImg1, newImg2, brandId, 
     await supabase.storage.from("product_image").remove(imagesToDelete);
   }
 
-  // 2. Update gambar
   if (newImg1) {
     await supabase
       .from("product_image")
@@ -197,7 +192,6 @@ export async function updateProduct(productId, form, newImg1, newImg2, brandId, 
       .eq("order", 2);
   }
 
-  // 3. Update product utama
   await supabase
     .from("product")
     .update({
@@ -207,7 +201,6 @@ export async function updateProduct(productId, form, newImg1, newImg2, brandId, 
     })
     .eq("id", productId);
 
-  // 4. Replace kategori
   await supabase.from("product_categories").delete().eq("product_id", productId);
 
   if (categoryIds.length > 0) {
@@ -215,7 +208,6 @@ export async function updateProduct(productId, form, newImg1, newImg2, brandId, 
       product_id: productId,
       category_id: cat
     }));
-
     await supabase.from("product_categories").insert(mapping);
   }
 
@@ -234,7 +226,8 @@ export async function getVariants(productId) {
       size,
       price,
       stock,
-      grades:grades_id ( id, name )
+      grades:grades_id ( id, name ),
+      created_by:profiles(id, usernames)
     `)
     .eq("product_id", productId)
     .order("id", { ascending: true });
@@ -254,12 +247,17 @@ export async function getAllGrades() {
 }
 
 export async function addVariant(productId, variant) {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
   const payload = {
     product_id: productId,
     size: variant.size.trim().toUpperCase(),
     grades_id: Number(variant.grades_id),
     price: Number(variant.price),
-    stock: Number(variant.stock)
+    stock: Number(variant.stock),
+    created_by: user.id
   };
 
   const { error } = await supabase

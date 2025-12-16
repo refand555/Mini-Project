@@ -1,17 +1,19 @@
-// src/pages/Cart.jsx
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Cart({ onClose }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // TAMBAHAN (tidak mengganggu state lama)
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     if (!user) return;
@@ -47,9 +49,19 @@ export default function Cart({ onClose }) {
     fetchCart();
   }, [user]);
 
+  // TAMBAHAN KECIL
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id]
+    );
+  };
+
   const deleteItem = async (id) => {
     await supabase.from("cart").delete().eq("id", id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+    setSelectedIds((prev) => prev.filter((x) => x !== id));
   };
 
   const updateQuantity = async (cartId, newQty) => {
@@ -62,23 +74,40 @@ export default function Cart({ onClose }) {
     );
   };
 
-  const totalHarga = items.reduce(
-    (sum, item) => sum + Number(item.variant.price) * item.quantity,
-    0
-  );
+  // TOTAL HARGA (struktur sama, hanya difilter)
+  const totalHarga = items
+    .filter((item) => selectedIds.includes(item.id))
+    .reduce(
+      (sum, item) => sum + Number(item.variant.price) * item.quantity,
+      0
+    );
 
   if (loading) return <div className="p-6 text-center">Memuat keranjang...</div>;
 
   return (
     <main className="p-6 max-w-3xl mx-auto">
+      {/* HEADER */}
       <div className="flex items-center gap-3 mb-6">
-       <button
-        onClick={onClose}
-        className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition"
-      >
-        <X size={20} className="text-black" />
-      </button>
-      <h1 className="text-3xl font-bold mb-6 tracking-wide">Keranjang Belanja</h1>
+        <button
+          onClick={() => {
+            if (onClose) {
+              onClose();
+            } else {
+              navigate(-1);
+            }
+          }}
+          className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition"
+        >
+          {onClose ? (
+            <X size={20} className="text-black" />
+          ) : (
+            <ArrowLeft size={20} className="text-black" />
+          )}
+        </button>
+
+        <h1 className="text-3xl font-bold tracking-wide">
+          Keranjang Belanja
+        </h1>
       </div>
 
       {items.length === 0 ? (
@@ -101,12 +130,22 @@ export default function Cart({ onClose }) {
                   key={item.id}
                   className="flex items-center gap-4 p-5 border rounded-xl bg-white shadow-sm hover:shadow-md transition"
                 >
+                  {/* CHECKBOX (nempel, tidak ubah layout besar) */}
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    className="w-4 h-4"
+                  />
+
                   {/* Gambar */}
-                  <div className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center"
-                  onClick={() => {
-                  window.dispatchEvent(new Event("close-sidebar"));
-                  navigate(`/product/${item.product.id}`);
-                }}>
+                  <div
+                    className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center"
+                    onClick={() => {
+                      window.dispatchEvent(new Event("close-sidebar"));
+                      navigate(`/product/${item.product.id}`);
+                    }}
+                  >
                     {img ? (
                       <img
                         src={img}
@@ -120,11 +159,13 @@ export default function Cart({ onClose }) {
 
                   {/* Detail */}
                   <div className="flex-1">
-                    <h2 className="font-semibold text-[15px] leading-snug"
-                    onClick={() => {
-                    window.dispatchEvent(new Event("close-sidebar"));
-                    navigate(`/product/${item.product.id}`);
-                    }}>
+                    <h2
+                      className="font-semibold text-[15px] leading-snug"
+                      onClick={() => {
+                        window.dispatchEvent(new Event("close-sidebar"));
+                        navigate(`/product/${item.product.id}`);
+                      }}
+                    >
                       {item.product.name}
                     </h2>
 
@@ -142,8 +183,6 @@ export default function Cart({ onClose }) {
 
                     {/* Quantity */}
                     <div className="flex items-center gap-3 mt-3">
-
-                      {/* MINUS */}
                       <button
                         onClick={() =>
                           item.quantity > 1 &&
@@ -158,7 +197,6 @@ export default function Cart({ onClose }) {
                         {item.quantity}
                       </span>
 
-                      {/* PLUS */}
                       <button
                         onClick={() =>
                           item.quantity < maxStock &&
@@ -188,9 +226,23 @@ export default function Cart({ onClose }) {
               Total: Rp {totalHarga.toLocaleString("id-ID")}
             </div>
 
-           <button
-            className="bg-black text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition"
-            onClick={() => navigate("/checkout")}>
+            <button
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${
+                selectedIds.length === 0
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800"
+              }`}
+             onClick={() => {
+              if (selectedIds.length === 0) return;
+              const selectedItems = items.filter((item) =>
+                selectedIds.includes(item.id)
+              );
+              navigate("/checkout", {
+                state: { selectedItems },
+              });
+            }}
+
+            >
               Checkout
             </button>
           </div>

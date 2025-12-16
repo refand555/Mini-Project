@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,  useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [cartItems, setCartItems] = useState([]);
   const [cartLoading, setCartLoading] = useState(true);
@@ -62,38 +63,47 @@ useEffect(() => {
   // ==========================================
   // FETCH CART USER + GAMBAR PRODUK
   // ==========================================
-  useEffect(() => {
-    if (!user) return;
+useEffect(() => {
+  // KASUS 1: datang dari Cart (ADA item terpilih)
+  if (location.state?.selectedItems) {
+    setCartItems(location.state.selectedItems);
+    setCartLoading(false);
+    return;
+  }
 
-    const fetchCart = async () => {
-      const { data, error } = await supabase
-        .from("cart")
-        .select(`
+  // KASUS 2: fallback (reload / direct access)
+  if (!user) return;
+
+  const fetchCart = async () => {
+    const { data, error } = await supabase
+      .from("cart")
+      .select(`
+        id,
+        quantity,
+        product:product_id (
           id,
-          quantity,
-          product:product_id (
-            id,
-            name,
-            images:product_image ( image_url )
-          ),
-          variant:variant_id (
-            id,
-            size,
-            price,
-            stock
-          )
-        `)
-        .eq("user_id", user.id);
+          name,
+          images:product_image ( image_url )
+        ),
+        variant:variant_id (
+          id,
+          size,
+          price,
+          stock
+        )
+      `)
+      .eq("user_id", user.id);
 
-      if (!error) {
-        setCartItems(data || []);
-      }
+    if (!error) {
+      setCartItems(data || []);
+    }
 
-      setCartLoading(false);
-    };
+    setCartLoading(false);
+  };
 
-    fetchCart();
-  }, [user]);
+  fetchCart();
+}, [user, location.state]);
+
 
   // TOTAL
   const totalHarga = cartItems.reduce(
@@ -293,7 +303,8 @@ useEffect(() => {
         <h2 className="text-lg font-semibold mb-4">Ringkasan Pesanan</h2>
 
         {cartItems.map((item) => {
-          const imageUrl = item.product.images?.[0]?.image_url || "";
+          const imageUrl =item.product.product_image?.[0]?.image_url || "";
+
 
           return (
             <div
