@@ -37,6 +37,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import Ordersuccess from "./pages/Ordersuccess";
 import UserOrders from "./pages/UserOrders";
 import OrderDetail from "./pages/OrderDetail";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const location = useLocation();
@@ -85,6 +86,18 @@ export default function App() {
 
   return (
     <>
+    {/* TOAST GLOBAL */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "#111",
+            color: "#fff",
+            fontSize: "14px",
+          },
+        }}
+      />
       {!hideLayout && <Header isOnHero={isHome && isOnHero} />}
 
       <Routes>

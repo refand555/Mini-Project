@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../../../lib/supabaseClient";
 import { insertProduct } from "./Product.api";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -78,35 +79,42 @@ export default function AddProduct() {
     return data.publicUrl;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // =========================
-    // VALIDASI WAJIB
-    // =========================
-    if (
-      !form.nama ||
-      !form.brand_id ||
-      !form.grades_id ||
-      !form.size ||
-      !form.stock ||
-      !form.harga
-    ) {
-      alert("Lengkapi semua field wajib (Nama, Brand, Grade, Size, Stock, Harga)");
-      return;
-    }
+  // =========================
+  // VALIDASI WAJIB
+  // =========================
+  if (
+    !form.nama ||
+    !form.brand_id ||
+    !form.grades_id ||
+    !form.size ||
+    !form.stock ||
+    !form.harga
+  ) {
+    toast.error(
+      "Lengkapi semua field wajib (Nama, Brand, Grade, Size, Stock, Harga)"
+    );
+    return;
+  }
 
-    try {
-      const img1 = form.gambar1 ? await uploadImage(form.gambar1) : null;
-      const img2 = form.gambar2 ? await uploadImage(form.gambar2) : null;
+  const toastId = toast.loading("Menyimpan produk...");
 
-      await insertProduct(form, img1, img2, form.brand_id, form.category_ids);
-      navigate("/admin/products");
-    } catch (err) {
-      alert(err.message);
-      console.error("Gagal menambah produk:", err);
-    }
-  };
+  try {
+    const img1 = form.gambar1 ? await uploadImage(form.gambar1) : null;
+    const img2 = form.gambar2 ? await uploadImage(form.gambar2) : null;
+
+    await insertProduct(form, img1, img2, form.brand_id, form.category_ids);
+
+    toast.success("Produk berhasil ditambahkan", { id: toastId });
+    navigate("/admin/products");
+  } catch (err) {
+    toast.error(err.message || "Gagal menambah produk", { id: toastId });
+    console.error("Gagal menambah produk:", err);
+  }
+};
+
 
   return (
     <div className="p-10 w-full">

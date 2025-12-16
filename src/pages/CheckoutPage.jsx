@@ -3,6 +3,7 @@ import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { useNavigate,  useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
@@ -122,24 +123,26 @@ useEffect(() => {
   // ==========================================
   const handlePlaceOrder = async () => {
   if (!nama || !alamat || !nohp) {
-    alert("Semua data pemesan harus diisi.");
+    toast.error("Semua data pemesan harus diisi");
     return;
   }
 
   if (cartItems.length === 0) {
-    alert("Keranjang kosong.");
+    toast.error("Keranjang kosong");
     return;
   }
 
   // Validasi stok (opsional, tetap boleh cek)
   for (const item of cartItems) {
     if (item.quantity > item.variant.stock) {
-      alert(
-        `Stok tidak cukup untuk ${item.product.name} (Size ${item.variant.size}).`
-      );
+      toast.error(
+          `Stok tidak cukup untuk ${item.product.name} (Size ${item.variant.size})`
+        );
       return;
     }
   }
+
+const loadingToast = toast.loading("Memproses pesanan...");
 
   // Update profile
   await supabase
@@ -232,26 +235,22 @@ useEffect(() => {
       .update({ snap_token: token })
       .eq("id", newOrder.id);
 
+    toast.success("Pesanan dibuat", { id: loadingToast });
+
     // 5) Buka Snap
     window.snap.pay(data.token, {
-      onSuccess: function () {
-        navigate("/order-success");
-      },
-      onPending: function () {
-        navigate("/order-success");
-      },
-      onError: function () {
-        alert("Terjadi kesalahan saat pembayaran.");
-      },
-      onClose: function () {
-        // user nutup pop up tanpa bayar
-        // biarin, status tetap 'Waiting for payment'
-        navigate("/orders");
-      },
-    });
+        onSuccess: () => navigate("/order-success"),
+        onPending: () => navigate("/order-success"),
+        onError: () => {
+          toast.error("Pembayaran gagal");
+          navigate("/orders");
+        },
+        onClose: () => navigate("/orders"),
+      });
+      
   } catch (e) {
+    toast.error("Gagal memproses checkout", { id: loadingToast });
     console.error(e);
-    alert("Error memproses pembayaran.");
   }
 };
 

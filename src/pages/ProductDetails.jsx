@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { ShoppingCart, HeartPlus, ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
+
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -118,7 +120,11 @@ export default function ProductDetails() {
   // CART
   const addToCart = async () => {
     if (!user) return navigate("/login");
-    if (!finalVariant) return alert("Pilih size dan grades");
+    if (!finalVariant) { toast.error("Pilih size dan grades");
+  return;
+}
+
+ const toastId = toast.loading("Menambahkan ke keranjang...");
 
     const { data: exist } = await supabase
       .from("cart")
@@ -132,6 +138,7 @@ export default function ProductDetails() {
       const newQty = Math.min(exist.quantity + quantity, finalVariant.stock);
       await supabase.from("cart").update({ quantity: newQty }).eq("id", exist.id);
       window.dispatchEvent(new Event("cart-updated"));
+      toast.success("Keranjang diperbarui", { id: toastId });
       return;
     }
 
@@ -140,11 +147,14 @@ export default function ProductDetails() {
     ]);
 
     window.dispatchEvent(new Event("cart-updated"));
+    toast.success("Ditambahkan ke keranjang", { id: toastId });
   };
 
   // WISHLIST
   const toggleWishlist = async () => {
     if (!user) return navigate("/login");
+    const toastId = toast.loading("Memperbarui wishlist...");
+
 
     const { data: exist } = await supabase
       .from("wishlist")
@@ -156,6 +166,7 @@ export default function ProductDetails() {
     if (exist) {
       await supabase.from("wishlist").delete().eq("id", exist.id);
       window.dispatchEvent(new Event("wishlist-updated"));
+      toast.success("Dihapus dari wishlist", { id: toastId });
       return;
     }
 
@@ -164,6 +175,7 @@ export default function ProductDetails() {
     ]);
 
     window.dispatchEvent(new Event("wishlist-updated"));
+    toast.success("Ditambahkan ke wishlist", { id: toastId });
   };
 
   return (

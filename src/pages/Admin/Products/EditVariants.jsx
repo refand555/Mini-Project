@@ -8,6 +8,7 @@ import {
   deleteVariant,
 } from "./Product.api";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function EditVariant() {
   const { id } = useParams();
@@ -42,9 +43,11 @@ export default function EditVariant() {
 
   const handleAddVariant = async () => {
     if (!form.size || !form.grades_id || !form.price || !form.stock) {
-      alert("Lengkapi semua field varian!");
+      toast.error("Lengkapi semua field varian");
       return;
     }
+
+    const loadingToast = toast.loading("Menambah varian...");
 
     try {
       await addVariant(id, form);
@@ -52,32 +55,38 @@ export default function EditVariant() {
       setVariants(updated);
 
       setForm({ size: "", grades_id: "", price: "", stock: "" });
+      toast.success("Varian berhasil ditambahkan", { id: loadingToast });
     } catch (err) {
-      alert("Gagal menambah varian: " + err.message);
+      toast.error("Gagal menambah varian", { id: loadingToast });
     }
   };
 
   const handleUpdate = async (variantId, field, value) => {
-    await updateVariantField(variantId, field, value);
+    const loadingToast = toast.loading("Menyimpan perubahan...");
 
+    await updateVariantField(variantId, field, value);
     const updated = await getVariants(id);
     setVariants(updated);
+
+    toast.success("Varian diperbarui", { id: loadingToast });
   };
 
   const handleDelete = async (variantId) => {
     if (!confirm("Hapus varian ini?")) return;
 
+    const loadingToast = toast.loading("Menghapus varian...");
+
     await deleteVariant(variantId);
     const updated = await getVariants(id);
     setVariants(updated);
+
+    toast.success("Varian dihapus", { id: loadingToast });
   };
 
   if (loading) return <p className="p-6">Loading...</p>;
 
   return (
     <div className="p-10 w-full">
-
-      {/* HEADER */}
       <div className="flex items-center gap-3 mb-8">
         <button
           className="p-2 bg-white rounded-full shadow-sm hover:scale-110 transition"
@@ -85,11 +94,9 @@ export default function EditVariant() {
         >
           <ArrowLeft size={20} className="text-black" />
         </button>
-
         <h1 className="text-3xl font-bold">Edit Varian Produk</h1>
       </div>
 
-      {/* TABEL VARIAN */}
       <div className="bg-white border border-gray-200 shadow rounded-xl p-6 mb-12">
         <table className="w-full border rounded-xl overflow-hidden">
           <thead className="bg-gray-200">
@@ -101,7 +108,6 @@ export default function EditVariant() {
               <th className="p-3 border">Aksi</th>
             </tr>
           </thead>
-
           <tbody>
             {variants.map((v) => (
               <tr key={v.id} className="even:bg-gray-50">
@@ -115,9 +121,7 @@ export default function EditVariant() {
                     className="w-full bg-gray-200 border border-gray-300 rounded-lg p-2"
                   />
                 </td>
-
                 <td className="border p-2">{v.grades?.name}</td>
-
                 <td className="border p-2">
                   <input
                     type="number"
@@ -128,7 +132,6 @@ export default function EditVariant() {
                     className="w-full bg-gray-200 border border-gray-300 rounded-lg p-2"
                   />
                 </td>
-
                 <td className="border p-2">
                   <input
                     type="number"
@@ -139,7 +142,6 @@ export default function EditVariant() {
                     className="w-full bg-gray-200 border border-gray-300 rounded-lg p-2"
                   />
                 </td>
-
                 <td className="border p-2 text-center">
                   <button
                     onClick={() => handleDelete(v.id)}
@@ -154,58 +156,45 @@ export default function EditVariant() {
         </table>
       </div>
 
-      {/* TAMBAH VARIAN BARU */}
       <div className="bg-white border border-gray-200 shadow rounded-xl p-6">
-
         <h2 className="text-xl font-semibold mb-6">Tambah Varian Baru</h2>
 
         <div className="flex flex-col gap-6 mb-8">
+          <input
+            placeholder="Size"
+            value={form.size}
+            onChange={(e) => handleChange("size", e.target.value)}
+            className="bg-gray-200 border border-gray-300 rounded-lg p-3"
+          />
 
-          <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">Size</label>
-            <input
-              type="text"
-              value={form.size}
-              onChange={(e) => handleChange("size", e.target.value)}
-              className="w-full bg-gray-200 border border-gray-300 rounded-lg p-3"
-            />
-          </div>
+          <select
+            value={form.grades_id}
+            onChange={(e) => handleChange("grades_id", e.target.value)}
+            className="bg-gray-200 border border-gray-300 rounded-lg p-3"
+          >
+            <option value="">Pilih Grade</option>
+            {grades.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
 
-          <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">Grade</label>
-            <select
-              value={form.grades_id}
-              onChange={(e) => handleChange("grades_id", e.target.value)}
-              className="w-full bg-gray-200 border border-gray-300 rounded-lg p-3"
-            >
-              <option value="">Pilih Grade</option>
-              {grades.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input
+            type="number"
+            placeholder="Harga"
+            value={form.price}
+            onChange={(e) => handleChange("price", e.target.value)}
+            className="bg-gray-200 border border-gray-300 rounded-lg p-3"
+          />
 
-          <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">Harga</label>
-            <input
-              type="number"
-              value={form.price}
-              onChange={(e) => handleChange("price", e.target.value)}
-              className="w-full bg-gray-200 border border-gray-300 rounded-lg p-3"
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className="text-sm text-gray-600 mb-1">Stok</label>
-            <input
-              type="number"
-              value={form.stock}
-              onChange={(e) => handleChange("stock", e.target.value)}
-              className="w-full bg-gray-200 border border-gray-300 rounded-lg p-3"
-            />
-          </div>
+          <input
+            type="number"
+            placeholder="Stok"
+            value={form.stock}
+            onChange={(e) => handleChange("stock", e.target.value)}
+            className="bg-gray-200 border border-gray-300 rounded-lg p-3"
+          />
         </div>
 
         <button

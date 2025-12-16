@@ -4,6 +4,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,40 +17,43 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+    const loading = toast.loading("Masuk ke akun...");
+
     try {
       // 1. login supabase
       const result = await login(email, password);
 
       if (result?.error) {
-        alert("Email atau password salah");
+        toast.error("Email atau password salah", { id: loading });
         return;
       }
 
-      // 2. Ambil session yang sudah valid
+      // 2. Ambil session
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user;
 
       if (!user) {
-        alert("Login gagal, user tidak terbaca");
+        toast.error("Login gagal, user tidak terbaca", { id: loading });
         return;
       }
 
-      // 3. Cek role user
+      // 3. Cek role
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      // 4. Arahkan sesuai role
+      toast.success("Login berhasil", { id: loading });
+
+      // 4. Redirect sesuai role
       if (profile?.role === "admin") {
         navigate("/admin", { replace: true });
       } else {
         navigate("/", { replace: true });
       }
-
     } catch (err) {
-      alert("Login gagal: " + err.message);
+      toast.error("Login gagal", { id: loading });
       console.error(err);
     }
   };
@@ -101,10 +105,10 @@ export default function Login() {
           </div>
 
           <p className="text-right text-sm mt-1">
-          <a href="/forgot-password" className="text-black underline">
-            Lupa password?
-          </a>
-        </p>
+            <a href="/forgot-password" className="text-black underline">
+              Lupa password?
+            </a>
+          </p>
 
           <button
             type="submit"
@@ -121,7 +125,10 @@ export default function Login() {
 
           <p className="text-center text-sm text-gray-600">
             Belum punya akun?
-            <a href="/register" className="text-black font-medium underline ml-1">
+            <a
+              href="/register"
+              className="text-black font-medium underline ml-1"
+            >
               Daftar Sekarang
             </a>
           </p>

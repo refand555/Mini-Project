@@ -4,6 +4,7 @@ import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { Trash2, ShoppingCart, X, ArrowLeft } from "lucide-react";
 import { useNavigate} from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function Wishlist({ onClose, isSidebar = false }) {
   const { user } = useAuth();
@@ -35,16 +36,31 @@ export default function Wishlist({ onClose, isSidebar = false }) {
         `)
         .eq("user_id", user.id);
 
-      if (!error) setItems(data);
+      if (error) {
+        toast.error("Gagal memuat wishlist");
+        return;
+      }
+
+      setItems(data || []);
       setLoading(false);
     }
 
     loadWishlist();
   }, [user]);
 
+  // REMOVE ITEM + TOAST
   const removeItem = async (id) => {
-    await supabase.from("wishlist").delete().eq("id", id);
+    const loadingToast = toast.loading("Menghapus dari wishlist...");
+
+    const { error } = await supabase.from("wishlist").delete().eq("id", id);
+
+    if (error) {
+      toast.error("Gagal menghapus wishlist", { id: loadingToast });
+      return;
+    }
+
     setItems((prev) => prev.filter((item) => item.id !== id));
+    toast.success("Dihapus dari wishlist", { id: loadingToast });
   };
 
   if (loading) {
@@ -98,11 +114,14 @@ export default function Wishlist({ onClose, isSidebar = false }) {
                 className="flex items-center gap-4 p-5 border rounded-xl bg-white shadow-sm hover:shadow-md transition"
               >
                 {/* GAMBAR */}
-                <div className="w-[100px] h-[100px] flex items-center justify-center"
-                onClick={() => {
-                if (isSidebar && onClose) onClose();
-                navigate(`/product/${item.product.id}`);
-              }}>
+                <div
+                  className="w-[100px] h-[100px] flex items-center justify-center"
+                  onClick={() => {
+                    if (isSidebar && onClose) onClose();
+                    toast.success("Membuka produk");
+                    navigate(`/product/${item.product.id}`);
+                  }}
+                >
                   <img
                     src={displayImage}
                     alt={item.product.name}
@@ -125,10 +144,12 @@ export default function Wishlist({ onClose, isSidebar = false }) {
                 <div className="flex flex-col items-center gap-3">
                   <button
                     onClick={() => {
-                    if (isSidebar && onClose) onClose();
-                    navigate(`/product/${item.product.id}`);
-                  }}
-                    className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition">
+                      if (isSidebar && onClose) onClose();
+                      toast.success("Menuju halaman produk");
+                      navigate(`/product/${item.product.id}`);
+                    }}
+                    className="p-2 rounded-full bg-black text-white hover:bg-gray-800 transition"
+                  >
                     <ShoppingCart size={18} />
                   </button>
 

@@ -3,6 +3,7 @@ import supabase from "../lib/supabaseClient";
 import { useAuth } from "../context/authContext";
 import { Trash2, X, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function Cart({ onClose }) {
   const { user } = useAuth();
@@ -10,16 +11,14 @@ export default function Cart({ onClose }) {
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // TAMBAHAN (tidak mengganggu state lama)
   const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchCart = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("cart")
         .select(`
           id,
@@ -42,14 +41,13 @@ export default function Cart({ onClose }) {
         `)
         .eq("user_id", user.id);
 
-      if (!error) setItems(data);
+      setItems(data || []);
       setLoading(false);
     };
 
     fetchCart();
   }, [user]);
 
-  // TAMBAHAN KECIL
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id)
@@ -58,14 +56,34 @@ export default function Cart({ onClose }) {
     );
   };
 
+  // DELETE ITEM + TOAST
   const deleteItem = async (id) => {
-    await supabase.from("cart").delete().eq("id", id);
+    const loadingToast = toast.loading("Menghapus item...");
+
+    const { error } = await supabase.from("cart").delete().eq("id", id);
+
+    if (error) {
+      toast.error("Gagal menghapus item", { id: loadingToast });
+      return;
+    }
+
     setItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((x) => x !== id));
+
+    toast.success("Item dihapus dari keranjang", { id: loadingToast });
   };
 
+  // UPDATE QTY + TOAST
   const updateQuantity = async (cartId, newQty) => {
-    await supabase.from("cart").update({ quantity: newQty }).eq("id", cartId);
+    const { error } = await supabase
+      .from("cart")
+      .update({ quantity: newQty })
+      .eq("id", cartId);
+
+    if (error) {
+      toast.error("Gagal mengubah jumlah");
+      return;
+    }
 
     setItems((prev) =>
       prev.map((item) =>
@@ -74,7 +92,6 @@ export default function Cart({ onClose }) {
     );
   };
 
-  // TOTAL HARGA (struktur sama, hanya difilter)
   const totalHarga = items
     .filter((item) => selectedIds.includes(item.id))
     .reduce(
@@ -90,11 +107,8 @@ export default function Cart({ onClose }) {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => {
-            if (onClose) {
-              onClose();
-            } else {
-              navigate(-1);
-            }
+            if (onClose) onClose();
+            else navigate(-1);
           }}
           className="p-2 rounded-full bg-white shadow-sm hover:scale-110 transition"
         >
@@ -128,9 +142,8 @@ export default function Cart({ onClose }) {
               return (
                 <div
                   key={item.id}
-                  className="flex items-center gap-4 p-5 border rounded-xl bg-white shadow-sm hover:shadow-md transition"
+                  className="flex items-center gap-4 p-5 border rounded-xl bg-white shadow-sm"
                 >
-                  {/* CHECKBOX (nempel, tidak ubah layout besar) */}
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(item.id)}
@@ -138,62 +151,48 @@ export default function Cart({ onClose }) {
                     className="w-4 h-4"
                   />
 
-                  {/* Gambar */}
                   <div
-                    className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden flex items-center justify-center"
+                    className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden"
                     onClick={() => {
                       window.dispatchEvent(new Event("close-sidebar"));
                       navigate(`/product/${item.product.id}`);
                     }}
                   >
-                    {img ? (
+                    {img && (
                       <img
                         src={img}
                         alt={item.product.name}
                         className="object-cover w-full h-full"
                       />
-                    ) : (
-                      <span className="text-gray-400 text-xs">No Image</span>
                     )}
                   </div>
 
-                  {/* Detail */}
                   <div className="flex-1">
-                    <h2
-                      className="font-semibold text-[15px] leading-snug"
-                      onClick={() => {
-                        window.dispatchEvent(new Event("close-sidebar"));
-                        navigate(`/product/${item.product.id}`);
-                      }}
-                    >
+                    <h2 className="font-semibold text-[15px]">
                       {item.product.name}
                     </h2>
 
-                    <p className="text-sm text-gray-700 mt-1">
-                      Rp {Number(item.variant.price).toLocaleString("id-ID")}
+                    <p className="text-sm mt-1">
+                      Rp{" "}
+                      {Number(item.variant.price).toLocaleString("id-ID")}
                     </p>
 
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm mt-1">
                       Size: {item.variant.size}
                     </p>
 
-                    <p className="text-sm text-gray-600">
-                      Grade: {item.variant.grades?.name}
-                    </p>
-
-                    {/* Quantity */}
                     <div className="flex items-center gap-3 mt-3">
                       <button
                         onClick={() =>
                           item.quantity > 1 &&
                           updateQuantity(item.id, item.quantity - 1)
                         }
-                        className="px-3 py-1 border rounded bg-white"
+                        className="px-3 py-1 border rounded"
                       >
                         -
                       </button>
 
-                      <span className="text-md font-semibold w-6 text-center">
+                      <span className="font-semibold">
                         {item.quantity}
                       </span>
 
@@ -202,17 +201,16 @@ export default function Cart({ onClose }) {
                           item.quantity < maxStock &&
                           updateQuantity(item.id, item.quantity + 1)
                         }
-                        className="px-3 py-1 border rounded bg-white"
+                        className="px-3 py-1 border rounded"
                       >
                         +
                       </button>
                     </div>
                   </div>
 
-                  {/* Delete */}
                   <button
                     onClick={() => deleteItem(item.id)}
-                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 transition"
+                    className="p-2 rounded-full bg-gray-100 hover:bg-red-100"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -222,26 +220,31 @@ export default function Cart({ onClose }) {
           </div>
 
           <div className="mt-10 border-t pt-6 flex items-center justify-between">
-            <div className="text-lg font-semibold tracking-wide">
+            <div className="text-lg font-semibold">
               Total: Rp {totalHarga.toLocaleString("id-ID")}
             </div>
 
             <button
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold ${
                 selectedIds.length === 0
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-black text-white hover:bg-gray-800"
+                  ? "bg-gray-300 text-gray-500"
+                  : "bg-black text-white"
               }`}
-             onClick={() => {
-              if (selectedIds.length === 0) return;
-              const selectedItems = items.filter((item) =>
-                selectedIds.includes(item.id)
-              );
-              navigate("/checkout", {
-                state: { selectedItems },
-              });
-            }}
+              onClick={() => {
+                if (selectedIds.length === 0) {
+                  toast.error("Pilih minimal 1 produk");
+                  return;
+                }
 
+                const selectedItems = items.filter((item) =>
+                  selectedIds.includes(item.id)
+                );
+
+                toast.success("Menuju checkout");
+                navigate("/checkout", {
+                  state: { selectedItems },
+                });
+              }}
             >
               Checkout
             </button>

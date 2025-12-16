@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import supabase from "../../../lib/supabaseClient";
 import { getProductById, updateProduct } from "./Product.api";
 import { ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function EditProduct() {
   const navigate = useNavigate();
@@ -97,6 +98,8 @@ export default function EditProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const loadingToast = toast.loading("Menyimpan perubahan...");
+
     try {
       let newImg1 = null;
       let newImg2 = null;
@@ -113,8 +116,10 @@ export default function EditProduct() {
         form.category_ids
       );
 
+      toast.success("Produk berhasil diperbarui", { id: loadingToast });
       navigate("/admin/products");
     } catch (err) {
+      toast.error("Gagal update produk", { id: loadingToast });
       console.log("Gagal update produk:", err.message);
     }
   };
@@ -123,7 +128,6 @@ export default function EditProduct() {
 
   return (
     <div className="p-10 w-full">
-
       {/* HEADER */}
       <div className="mb-8 flex items-center gap-3">
         <button
@@ -142,8 +146,6 @@ export default function EditProduct() {
         className="bg-white border border-gray-200 shadow p-10 rounded-xl w-full"
       >
         <div className="flex flex-col gap-8">
-
-          {/* NAMA */}
           <FormInput
             label="Nama Produk"
             name="nama"
@@ -151,7 +153,6 @@ export default function EditProduct() {
             handle={handleChange}
           />
 
-          {/* BRAND */}
           <SelectBlock
             label="Brand"
             value={form.brand_id}
@@ -159,7 +160,6 @@ export default function EditProduct() {
             options={brands}
           />
 
-          {/* DESKRIPSI */}
           <div className="flex flex-col">
             <label className="text-gray-600 text-sm mb-1">Deskripsi</label>
             <textarea
@@ -170,7 +170,6 @@ export default function EditProduct() {
             ></textarea>
           </div>
 
-          {/* KATEGORI */}
           <div>
             <label className="text-gray-600 text-sm mb-2 block">Kategori</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -187,7 +186,6 @@ export default function EditProduct() {
             </div>
           </div>
 
-          {/* GAMBAR 1 */}
           <div className="flex flex-col">
             <label className="text-gray-600 text-sm mb-1">
               Gambar 1 (kosongkan jika tidak diganti)
@@ -208,7 +206,6 @@ export default function EditProduct() {
             />
           </div>
 
-          {/* GAMBAR 2 */}
           <div className="flex flex-col">
             <label className="text-gray-600 text-sm mb-1">
               Gambar 2 (kosongkan jika tidak diganti)
@@ -230,7 +227,6 @@ export default function EditProduct() {
           </div>
         </div>
 
-        {/* BUTTON */}
         <button
           type="submit"
           className="mt-10 bg-black text-white w-full py-3 rounded-xl font-semibold hover:bg-black/80 transition"
@@ -242,9 +238,7 @@ export default function EditProduct() {
   );
 }
 
-/* ---------------------------------------------
-   UNIVERSAL INPUT (tema profile admin)
---------------------------------------------- */
+/* --------------------------------------------- */
 function FormInput({ label, name, type = "text", form, handle }) {
   return (
     <div className="flex flex-col">
@@ -259,9 +253,6 @@ function FormInput({ label, name, type = "text", form, handle }) {
   );
 }
 
-/* ---------------------------------------------
-   UNIVERSAL SELECT (tema profile admin)
---------------------------------------------- */
 function SelectBlock({ label, value, onChange, options }) {
   return (
     <div className="flex flex-col">
